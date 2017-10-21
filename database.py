@@ -9,7 +9,7 @@ import mysql.connector
 from mysql.connector import errorcode
 
 try:
-    cnx = mysql.connector.connect(user='USERNAME',password='PASSWORD',
+    cnx = mysql.connector.connect(user='USER',password='PASS',
                                 host='127.0.0.1',
                                 database='movies')
 except mysql.connector.Error as err:
@@ -21,19 +21,33 @@ except mysql.connector.Error as err:
         print(err)
         
 TABLES = {}
-TABLES['movies'] = (
-    "CREATE TABLE `movies` ("
+TABLES['movie_all'] = (
+    "CREATE TABLE `movie_all` ("
     "  `title` varchar(200) NOT NULL,"
-    "  `const` varchar(100),"
+    "  `const` varchar(100) NOT NULL,"
     "  `url` varchar(100) NOT NULL,"
     "  `directors` varchar(300) NOT NULL,"
     "  `IMDB Rating` numeric(2,1) NOT NULL,"
+    "  `num_votes` int,"
     "  `runtime` int,"
     "  `year` numeric(4,0),"
     "  `release_date` datetime," 
-    "  `type` varchar(100),"
-    "  `month` varchar(20),"
-    "  `num_votes` int,"
+    "  `title_type` varchar(100),"
+    "  `metascore` int,"
+    "  `wins` int,"
+    "  `noms` int,"
+    "  `country` varchar(300),"
+    "  `language` varchar(200),"
+    "  `writers` varchar(300),"
+    "  `stars` varchar(300),"
+    "  `color` varchar(40),"
+    "  `aspect_ratio` varchar(15),"
+    "  `oscar_wins` int,"
+    "  `oscar_noms` int,"
+    "  `globe_wins` int,"
+    "  `globe_noms` int,"
+    "  `cannes_wins` int,"
+    "  `cannes_noms` int,"
     "  PRIMARY KEY (`const`)"
     ") ENGINE=InnoDB")
 
