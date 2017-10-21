@@ -9,9 +9,9 @@ import mysql.connector
 from mysql.connector import errorcode
 
 try:
-    cnx = mysql.connector.connect(user='USER',password='PASS',
-                                host='127.0.0.1',
-                                database='movies')
+    cnx = mysql.connector.connect(user='USER', password='PASS',
+                                  host='127.0.0.1',
+                                  database='movies')
 except mysql.connector.Error as err:
     if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
         print("Something is wrong with your user name or password")
@@ -19,7 +19,7 @@ except mysql.connector.Error as err:
         print("Database does not exist")
     else:
         print(err)
-        
+
 TABLES = {}
 TABLES['movie_all'] = (
     "CREATE TABLE `movie_all` ("
@@ -31,7 +31,7 @@ TABLES['movie_all'] = (
     "  `num_votes` int,"
     "  `runtime` int,"
     "  `year` numeric(4,0),"
-    "  `release_date` datetime," 
+    "  `release_date` datetime,"
     "  `title_type` varchar(100),"
     "  `metascore` int,"
     "  `wins` int,"
@@ -53,6 +53,6 @@ TABLES['movie_all'] = (
 
 
 cursor = cnx.cursor()
-for name, ex in TABLES.items(): 
-    print("Creating table {} ".format(name), end='')
+for name, ex in TABLES.items():
+    print("Creating table {}".format(name), end='')
     cursor.execute(ex)
