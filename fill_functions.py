@@ -1,18 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 20 13:50:37 2017
+Created on Sun Oct 22 13:38:05 2017
 
 @author: Gokhans
 """
 
-import pandas as pd
 from bs4 import BeautifulSoup
 import requests
 import re
-import mysql.connector
-from mysql.connector import errorcode
-import time
-import glob
 
 
 def get_metascore(soup):
@@ -128,7 +123,7 @@ def get_writers(soup):
         return ', '.join([x.text.strip() for x in writers[0].parent.find_all(attrs={'itemprop': 'name'})])
 
 
-def get_directors(soup):
+def get_directors(url):
     """
     DIRECTORS
 
@@ -140,10 +135,12 @@ def get_directors(soup):
 
     This function is usually not utilized.
     """
-
+    
     r = requests.get(url)
+    r.raise_for_status()
     data = r.text
     soup = BeautifulSoup(data, 'lxml')
+    
     directors = soup.find_all('h4', text=re.compile(".*Director.*"))
     if len(directors) == 0:
         return 'Undefined'
@@ -256,24 +253,30 @@ def get_awards(soup):
         cannes_noms = 0
         cannes_wins = 0
     else:
-        cannes = cannes[0].parent.next_sibling.next_sibling
-        cannes_wins = cannes.find_all(string=re.compile("Won"))
-        if len(cannes_wins) == 0:
+        try:
+            cannes = cannes[0].parent.next_sibling.next_sibling
+            cannes_wins = cannes.find_all(string=re.compile("Won"))
+            if len(cannes_wins) == 0:
+                cannes_wins = 0
+            else:
+                cannes_wins = len(cannes_wins)
+            
+            cannes_noms = cannes.find_all(string=re.compile("Nominated"))
+            if len(cannes_noms) == 0:
+                cannes_noms = 0
+            else:
+                cannes_noms = len(cannes_noms)
+        except:
             cannes_wins = 0
-        else:
-            cannes_wins = int(cannes_wins[0].parent.parent['rowspan'])
-
-        cannes_noms = cannes.find_all(string=re.compile("Nominated"))
-        if len(cannes_noms) == 0:
             cannes_noms = 0
-        else:
-            cannes_noms = int(cannes_noms[0].parent.parent['rowspan'])
+
     return (oscar_wins, oscar_noms, globe_wins, globe_noms, cannes_wins, cannes_noms)
 
 
 def get_all(url):
 
     r = requests.get(url)
+    r.raise_for_status()
     data = r.text
     soup = BeautifulSoup(data, 'lxml')
 
@@ -295,93 +298,3 @@ def get_all(url):
     o_wins, o_noms, g_wins, g_noms, c_wins, c_noms = get_awards(soup)
     return (metascore, wins, noms, country, lang, writers, stars, color, aspect,
             o_wins, o_noms, g_wins, g_noms, c_wins, c_noms)
-
-
-# =============================================================================
-# MAIN
-# =============================================================================
-
-if __name__ == '__main__':
-    try:
-        cnx = mysql.connector.connect(user='USER', password='PASS',
-                                      host='127.0.0.1',
-                                      database='movies')
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
-        else:
-            print(err)
-    cursor = cnx.cursor()
-
-    filenames = glob.glob('./*.csv')
-
-    for filename in filenames:
-        i = 0
-        start_time = time.time()
-        df = pd.read_csv(filename)
-        df = df.rename(index=str, columns={"Title type": "title_type"})
-        df = df.dropna(subset=['IMDb Rating'])
-        # the database will include movies only.
-        # TV Series and Mini Series are omitted.
-        df = df.query('title_type not in ["TV Series","Mini-Series"]')
-        df['Directors'].fillna('Undefined', inplace=True)
-        df['Runtime (mins)'].fillna(0, inplace=True)
-        # DB Connection
-
-        # iterating DF
-        for index, row in df.iterrows():
-            const = row['const']
-            cursor.execute("SELECT const FROM `movie_all`"
-                           "WHERE const='%s'" % row['const'])
-            data = cursor.fetchall()
-            if not data:
-                print('Adding a new movie')
-                i += 1
-                url = row['URL']
-                if row['Directors'] == 'Undefined':
-                    row['Directors'] = get_directors(url)
-
-                res = get_all(url)
-
-                # FOR DEBUGGING
-#                print("INSERT INTO `movie_all` "
-#                     "VALUES ('%s', '%s', '%s', '%s', %f, %d, "
-#                     "%d, %d, '%s', '%s', %d, %d, %d, '%s', '%s', "
-#                     "'%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d)" %
-#                     (row['Title'].replace("'", "''"), row['const'], row['URL'],
-#                      row['Directors'],
-#                     float(row['IMDb Rating']), row['Num. Votes'],
-#                     row['Runtime (mins)'], row['Year'],
-#                     row['Release Date (month/day/year)'], row['title_type'],
-#                     res[0], res[1], res[2], res[3], res[4], res[5], res[6],
-#                     res[7], res[8], res[9], res[10], res[11], res[12], res[13],
-#                     res[14]))
-
-                cursor.execute("INSERT INTO `movie_all` "
-                               "VALUES ('%s', '%s', '%s', '%s', %f, %d, "
-                               "%d, %d, '%s', '%s', %d, %d, %d, '%s', '%s', "
-                               "'%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d)" %
-                               (row['Title'].replace("'", "''"), row['const'],
-                                row['URL'], row['Directors'].replace(
-                                   "'", "''"),
-                                row['IMDb Rating'], row['Num. Votes'],
-                                row['Runtime (mins)'], row['Year'],
-                                row['Release Date (month/day/year)'], row['title_type'],
-                                res[0], res[1], res[2], res[3], res[4],
-                                res[5].replace(
-                                   "'", "''"), res[6].replace("'", "''"),
-                                res[7], res[8], res[9], res[10], res[11], res[12],
-                                res[13], res[14]))
-                print('Added to database: %s, %d' %
-                      (row['Title'], row['Year']))
-                cnx.commit()
-            else:
-                print('Movie already exists: %s, %d' %
-                      (row['Title'], row['Year']))
-        end_time = time.time()
-        print('Done with the CSV file %s in %d seconds' %
-              (filename, end_time - start_time))
-        print('New movies added: ', i)
-        print('\n****************************************************\n')
