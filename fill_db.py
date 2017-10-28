@@ -51,29 +51,13 @@ if __name__ == '__main__':
                            "WHERE const='%s'" % row['const'])
             data = cursor.fetchall()
             if not data:
-                print('Adding a new movie')
                 i += 1
                 url = row['URL']
                 if row['Directors'] == 'Undefined':
                     row['Directors'] =  ff.get_directors(url)
 
                 res = ff.get_all(url)
-
-                # FOR DEBUGGING
-#                print("INSERT INTO `movie_all` "
-#                     "VALUES ('%s', '%s', '%s', '%s', %f, %d, "
-#                     "%d, %d, '%s', '%s', %d, %d, %d, '%s', '%s', "
-#                     "'%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d)" %
-#                     (row['Title'].replace("'", "''"), row['const'], row['URL'],
-#                      row['Directors'],
-#                     float(row['IMDb Rating']), row['Num. Votes'],
-#                     row['Runtime (mins)'], row['Year'],
-#                     row['Release Date (month/day/year)'], row['title_type'],
-#                     res[0], res[1], res[2], res[3], res[4], res[5], res[6],
-#                     res[7], res[8], res[9], res[10], res[11], res[12], res[13],
-#                     res[14]))
-
-                cursor.execute("INSERT INTO `movie_all` "
+                command = ("INSERT INTO `movie_all` "
                                "VALUES ('%s', '%s', '%s', '%s', %f, %d, "
                                "%d, %d, '%s', '%s', %d, %d, %d, '%s', '%s', "
                                "'%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d)" %
@@ -83,17 +67,27 @@ if __name__ == '__main__':
                                 row['IMDb Rating'], row['Num. Votes'],
                                 row['Runtime (mins)'], row['Year'],
                                 row['Release Date (month/day/year)'], row['title_type'],
-                                res[0], res[1], res[2], res[3], res[4],
+                                res[0], res[1], res[2], res[3].replace(
+                                   "'", "''"), res[4],
                                 res[5].replace(
                                    "'", "''"), res[6].replace("'", "''"),
                                 res[7], res[8], res[9], res[10], res[11], res[12],
                                 res[13], res[14]))
-                print('Added to database: %s, %d' %
-                      (row['Title'], row['Year']))
-                cnx.commit()
+                try:
+                    print('Adding a new movie')
+                    cursor.execute(command)
+                    print('Added to database: %s, %d' %
+                          (row['Title'], int(row['Year'])))
+                    cnx.commit()
+                except:
+                    print("Error occured, logging")
+                    file = open("errorfile.txt","a")
+                    file.write(command+"\n")
+                    file.close()
+
             else:
                 print('Movie already exists: %s, %d' %
-                      (row['Title'], row['Year']))
+                      (row['Title'], int(row['Year'])))
         end_time = time.time()
         print('Done with the CSV file %s in %d seconds' %
               (filename, end_time - start_time))
